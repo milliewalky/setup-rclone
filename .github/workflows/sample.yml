@@ -1,0 +1,89 @@
+name: test setup rclone
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+jobs:
+  test_setup_rclone_on_windows:
+    runs-on: windows-latest
+
+    steps:
+    - name: setup rclone
+      uses: milliewalky/setup-rclone@v1
+      with:
+        conf: ${{ secrets.RCLONE_CONF_BASE64 }}
+
+    - name: check rclone capabilities
+      shell: cmd
+      run: rclone -h
+
+  test_setup_rclone_on_linux:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: setup rclone
+      uses: milliewalky/setup-rclone@v1
+      with:
+        conf: ${{ secrets.RCLONE_CONF_BASE64 }}
+
+    - name: check rclone capabilities
+      shell: bash
+      run: rclone -h
+
+  test_setup_rclone_on_macos:
+    runs-on: macos-latest
+  
+    steps:
+    - name: setup rclone
+      uses: milliewalky/setup-rclone@v1
+      with:
+        conf: ${{ secrets.RCLONE_CONF_BASE64 }}
+  
+    - name: check rclone capabilities
+      shell: bash
+      run: rclone -h
+
+  test_setup_rclone_on_windows_for_specific_version:
+    runs-on: windows-latest
+
+    steps:
+    - name: setup rclone
+      uses: milliewalky/setup-rclone@v1
+      with:
+        conf: ${{ secrets.RCLONE_CONF_BASE64 }}
+        tag: v1.64.2
+
+    - name: check rclone capabilities
+      shell: cmd
+      run: rclone version
+
+  test_setup_rclone_on_linux_for_specific_version:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: setup rclone
+      uses: milliewalky/setup-rclone@v1
+      with:
+        conf: ${{ secrets.RCLONE_CONF_BASE64 }}
+        tag: v1.64.2
+
+    - name: check rclone capabilities
+      shell: bash
+      run: rclone version
+
+  test_setup_rclone_on_macos_for_specific_version:
+    runs-on: macos-latest
+  
+    steps:
+    - name: setup rclone
+      uses: milliewalky/setup-rclone@v1
+      with:
+        conf: ${{ secrets.RCLONE_CONF_BASE64 }}
+        tag: v1.64.2
+  
+    - name: check rclone capabilities
+      shell: bash
+      run: rclone version
