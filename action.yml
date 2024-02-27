@@ -1,0 +1,102 @@
+name: setup rclone action
+description: download and unpack rclone for gh actions
+inputs:
+  conf:
+    description: rclone conf encoded in base64
+    default: false
+
+
+runs:
+  using: composite
+  steps:
+    # impl for Windows-based operating systems
+    - name: resolve url and download rclone
+      if: runner.os == 'Windows'
+      shell: powershell
+      working-directory: ${{ runner.temp }}
+      run: |
+        $response = Invoke-RestMethod -Uri "https://api.github.com/repos/rclone/rclone/releases/latest"
+        $download_url = $response.assets | Where-Object { $_.name -match 'windows-amd64.zip' } | Select-Object -ExpandProperty browser_download_url
+        Invoke-WebRequest -Uri $download_url -OutFile "rclone.zip"
+
+    - name: unpack rclone
+      if: runner.os == 'Windows'
+      shell: powershell
+      working-directory: ${{ runner.temp }}
+      run: Expand-Archive -Path "rclone.zip" -DestinationPath "rclone"
+
+    - name: move rclone contents and cleanup
+      if: runner.os == 'Windows'
+      shell: powershell
+      working-directory: ${{ runner.temp }}
+      run: |
+        Pushd rclone
+        $rclone_unpacked_dir = Get-ChildItem -Directory | Where-Object { $_.Name -match 'rclone-v.*-windows-amd64' }
+        Move-Item -Path "$rclone_unpacked_dir\*" -Destination "."
+        Popd
+
+    - name: rclone.conf from secret
+      if: runner.os == 'Windows'
+      shell: powershell
+      working-directory: ${{ runner.temp }}
+      run: |
+        [IO.File]::WriteAllBytes("rclone\rclone.conf", [Convert]::FromBase64String($env:conf))
+      env:
+        conf: ${{ inputs.conf }}
+
+    - name: add rclone to path
+      if: runner.os == 'Windows'
+      shell: powershell
+      run: echo "${{ runner.temp }}\rclone" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+    # impl for Unix-based operating systems
+    - name: resolve url and download rclone
+      if: runner.os == 'Linux'
+      shell: bash
+      working-directory: ${{ runner.temp }}
+      run: |
+        response=$(wget -qO- https://api.github.com/repos/rclone/rclone/releases/latest)
+        download_url=$(echo $response | jq -r '.assets[] | select(.name | test("linux-amd64.zip")) | .browser_download_url')
+        wget -O rclone.zip $download_url
+
+    - name: resolve url and download rclone
+      if: runner.os == 'macOS'
+      shell: bash
+      working-directory: ${{ runner.temp }}
+      run: |
+        response=$(curl -s https://api.github.com/repos/rclone/rclone/releases/latest)
+        download_url=$(echo $response | jq -r '.assets[] | select(.name | test("osx-amd64.zip")) | .browser_download_url')
+        curl -L $download_url -o rclone.zip
+
+    - name: unpack rclone
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      shell: bash
+      working-directory: ${{ runner.temp }}
+      run: |
+        unzip rclone.zip -d rclone
+
+    - name: move rclone contents and cleanup
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      shell: bash
+      working-directory: ${{ runner.temp }}
+      run: |
+        pushd rclone
+        rclone_unpacked_dir=$(ls -d */ | head -n 1)
+        echo $rclone_unpacked_dir
+        mv ${rclone_unpacked_dir}* .
+        rmdir "$rclone_unpacked_dir"
+        popd
+
+    - name: rclone.conf from secret
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      shell: bash
+      working-directory: ${{ runner.temp }}
+      run: |
+        echo "$conf" | base64 --decode > "rclone/rclone.conf"
+      env:
+        conf: ${{ inputs.conf }}
+
+    - name: add rclone to path
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      shell: bash
+      run: echo "${{ runner.temp }}/rclone" >> $GITHUB_PATH
